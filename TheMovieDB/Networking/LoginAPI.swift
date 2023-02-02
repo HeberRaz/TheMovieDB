@@ -29,7 +29,7 @@ struct LoginAPI {
       
       session.dataTask(with: request) { data, response, error in
           guard hasNo(error: error, completion: completion) else { return }
-//          guard isValid(response: response, completion: completion) else { return }
+          guard isValid(response: response, completion: completion) else { return }
           validate(data: data, completion: completion)
       }.resume()
    }

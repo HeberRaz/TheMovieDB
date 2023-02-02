@@ -21,6 +21,7 @@ final class LoginViewController: UIViewController {
    override func viewDidLoad() {
       super.viewDidLoad()
       viewModel?.userLoginData = UserLoginData()
+       viewModel?.delegate = self
       setupTextFieldDelegate()
       setupTextFieldTags()
    }
@@ -123,22 +124,22 @@ final class LoginViewController: UIViewController {
       passwordTextField.endEditing(true)
       viewModel?.requestLoginAccess()
       
-      viewModel?.$state.observer = { [weak self] (state: APIState?) in
-         DispatchQueue.main.async {
-            guard let serviceState: APIState = state else { return }
-            switch serviceState {
-               case .loading:
-                  self?.errorMessage.text = ""
-               case .success:
-                  let coordinator: Coordinator = MainCoordinator(rootViewController: self?.navigationController ?? UINavigationController(), viewControllerFactory: iOSCoordinatorFactory())
-                  coordinator.goToFilmCollection()
-                  self?.errorMessage.isHidden = true
-               case .failure:
-                  self?.errorMessage.text = self?.viewModel?.errorMessage ?? ""
-                  self?.errorMessage.isHidden = false
-            }
-         }
-      }
+//      viewModel?.$state.observer = { [weak self] (state: APIState?) in
+//         DispatchQueue.main.async {
+//            guard let serviceState: APIState = state else { return }
+//            switch serviceState {
+//               case .loading:
+//                  self?.errorMessage.text = ""
+//               case .success:
+//                  let coordinator: Coordinator = MainCoordinator(rootViewController: self?.navigationController ?? UINavigationController(), viewControllerFactory: iOSCoordinatorFactory())
+//                  coordinator.goToFilmCollection()
+//                  self?.errorMessage.isHidden = true
+//               case .failure:
+//                  self?.errorMessage.text = self?.viewModel?.errorMessage ?? ""
+//                  self?.errorMessage.isHidden = false
+//            }
+//         }
+//      }
    }
 }
 
@@ -211,5 +212,22 @@ extension LoginViewController: UITextFieldDelegate {
       
    }
    
+}
+
+extension LoginViewController: LoginStatus {
+    func successful() {
+        DispatchQueue.main.async { [weak self] in
+            let coordinator: Coordinator = MainCoordinator(rootViewController: self?.navigationController ?? UINavigationController(), viewControllerFactory: iOSCoordinatorFactory())
+            coordinator.goToFilmCollection()
+        }
+        
+    }
+    
+    func denied() {
+        DispatchQueue.main.async { [weak self] in
+            self?.errorMessage.text = self?.viewModel?.errorMessage ?? ""
+            self?.errorMessage.isHidden = false
+        }
+    }
 }
 
