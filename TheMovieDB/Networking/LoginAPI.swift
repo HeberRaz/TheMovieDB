@@ -8,9 +8,10 @@
 import Foundation
 
 struct LoginAPI {
+    typealias LoginResult = Result<LoginResponse, Error>
    let session: URLSession
    
-   func send(_ endpoint: Endpoint, userLoginData: UserLoginData, completion: @escaping (Result<LoginResponse, Error>) -> Void) {
+   func send(_ endpoint: Endpoint, userLoginData: UserLoginData, completion: @escaping (LoginResult) -> Void) {
       var request = endpoint.request
          
       request.httpMethod = HTTPMethod.POST.rawValue
@@ -27,41 +28,51 @@ struct LoginAPI {
    request.httpBody = parameters.percentEncoded()
       
       session.dataTask(with: request) { data, response, error in
-         
-         if let error = error {
+          guard hasNo(error: error, completion: completion) else { return }
+//          guard isValid(response: response, completion: completion) else { return }
+          validate(data: data, completion: completion)
+      }.resume()
+   }
+    
+    // MARK: - Private methods
+    
+    private func hasNo(error: Error?, completion: (LoginResult) -> Void) -> Bool {
+        if let error: Error = error {
             debugPrint("error", error)
             completion(.failure(error))
-            return
-         }
-         
-         guard let data = data else {
-            completion(.failure(APIError.noData))
-            return
-         }
-         guard let response = response as? HTTPURLResponse else {
+            return false
+        }
+        return true
+    }
+    
+    private func isValid(response: URLResponse?, completion: (LoginResult) -> Void) -> Bool {
+        guard let response: HTTPURLResponse = response as? HTTPURLResponse else {
             completion(.failure(APIError.response))
-            return
-         }
-         
-         guard (200 ... 299) ~= response.statusCode else {
+            return false
+        }
+        
+        guard (200 ... 299) ~= response.statusCode else {
             print("statusCode should be 2xx, but is \(response.statusCode)")
             print("response = \(response)")
             completion(.failure(APIError.internalServer))
+            return false
+        }
+        return true
+    }
+    
+    private func validate(data: Data?, completion: (LoginResult) -> Void) {
+        guard let data: Data = data else {
+            completion(.failure(APIError.noData))
             return
-         }
-         
-         do {
-            let loginResponse = try JSONDecoder().decode(LoginResponse.self, from: data)
-            completion(.success(loginResponse))
-            return
-         } catch {
+        }
+
+        do {
+            let getPlaces: LoginResponse = try JSONDecoder().decode(LoginResponse.self, from: data)
+            completion(.success(getPlaces))
+        } catch {
             completion(.failure(APIError.parsingData))
-         }
-         
-         
-      }.resume()
-   }
-   
+        }
+    }
 }
 
 extension Dictionary {
